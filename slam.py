@@ -15,17 +15,18 @@ fe = Extractor()
 
 def process_frame(img):
     img = cv2.resize(img, (WIDTH, HEIGHT))
-    keypoints, descriptors, matches = fe.extract(img)
+    matches = fe.extract(img)
 
     if matches is None:
         return
 
-    for point in keypoints:
-        u, v = map(lambda x: int(round(x)), point.pt)
-        cv2.circle(img, (u, v), color=(0, 255, 0), radius=3)
+    print("%d matches" % (len(matches)))
 
-    for match in matches:
-        print(match)
+    for pt1, pt2 in matches:
+        u1, v1 = map(lambda x: int(round(x)), pt1)
+        u2, v2 = map(lambda x: int(round(x)), pt2)
+        cv2.circle(img, (u1, v1), color=(0, 255, 0), radius=3)
+        cv2.line(img, (u1, v1), (u2, v2), color=(255, 0, 0))
 
     disp.paint(img)
 
