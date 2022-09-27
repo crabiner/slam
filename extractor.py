@@ -25,13 +25,19 @@ class Extractor(object):
         keypoints, descriptors = self.orb.compute(img, keypoints)
 
         # matching
-        # match to previous frame using brute force matcher
-        matches = None
+        ret = []
         if self.last is not None:
-            matches = self.bf.match(descriptors, self.last['descriptors'])
+            # match to previous frame using brute force matcher
+            matches = self.bf.knnMatch(descriptors, self.last['descriptors'], k=2)
+            for m, n in matches:
+                if m.distance < 0.75*n.distance:
+                    kp1 = keypoints[m.queryIdx].pt
+                    kp2 = self.last['keypoints'][m.trainIdx].pt
+                    ret.append((kp1, kp2))
 
-        self.last = {'keypoints': keypoints, 'descriptors': descriptors}
+        self.last = {'keypoint'
+                     's': keypoints, 'descriptors': descriptors}
 
-
-        return keypoints, descriptors, matches
+        # we only care about the matches
+        return ret
 
