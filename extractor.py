@@ -2,6 +2,8 @@
 import cv2
 from display import Display
 import numpy as np
+from skimage.measure import ransac
+from skimage.transform import FundamentalMatrixTransform
 
 MAX_FEATURES = 100
 
@@ -34,6 +36,22 @@ class Extractor(object):
                     kp1 = keypoints[m.queryIdx].pt
                     kp2 = self.last['keypoints'][m.trainIdx].pt
                     ret.append((kp1, kp2))
+
+        # filter
+        if len(ret) > 0:
+            ret = np.array(ret)
+            print(ret.shape)
+
+            model, inliers = ransac((ret[:, 0], ret[:, 1]),
+                                        FundamentalMatrixTransform,
+                                        min_samples = 8,
+                                        residual_threshold = 1,
+                                        max_trials = 100)
+
+            print(f"sum(inliers) {sum(inliers)} {inliers}")
+
+            # now we want just the inliers and not the noise
+            ret = ret[inliers]
 
         self.last = {'keypoint'
                      's': keypoints, 'descriptors': descriptors}
