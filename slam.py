@@ -9,7 +9,7 @@ HEIGHT = 1080 // 2
 
 disp = Display(WIDTH, HEIGHT)
 
-F = 1
+F = 740
 # principal point that is usually at the image center
 cx = WIDTH // 2
 cy = HEIGHT // 2

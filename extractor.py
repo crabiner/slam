@@ -67,9 +67,11 @@ class Extractor(object):
             ret[:, 0, :] = self.normalize(ret[:, 0, :])
             ret[:, 1, :] = self.normalize(ret[:, 1, :])
 
+            # When we have the F number (calibrated camera) we can use
+            # EssentialMatrixTransform and it estimates less parameters
             model, inliers = ransac((ret[:, 0], ret[:, 1]),
-                                        #EssentialMatrixTransform,
-                                        FundamentalMatrixTransform,
+                                        EssentialMatrixTransform,
+                                        #FundamentalMatrixTransform,
                                         min_samples = 8,
                                         residual_threshold = 1,
                                         max_trials = 100)
@@ -82,7 +84,7 @@ class Extractor(object):
             s, v, d = (np.linalg.svd(model.params))
             f_estimate = np.sqrt(2)/((v[0] + v[1])/2)
             f_estimate_avg.append(f_estimate)
-            print(f"f_estimate={np.median(f_estimate_avg)}" )
+            print(f"sqrt(2) = {np.median(f_estimate_avg)}" )
 
         self.last = {'keypoint'
                      's': keypoints, 'descriptors': descriptors}
