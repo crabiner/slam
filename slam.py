@@ -2,6 +2,7 @@
 import cv2
 from display import Display
 import numpy as np
+# np.set_printoptions(supress=True)
 from extractor import Extractor
 
 WIDTH = 1920 // 2
@@ -9,8 +10,10 @@ HEIGHT = 1080 // 2
 
 disp = Display(WIDTH, HEIGHT)
 
+F = 1
+K = np.array([[F, 0, WIDTH // 2], [0, F, HEIGHT // 2], [0, 0, 1]])
 
-fe = Extractor()
+fe = Extractor(WIDTH, HEIGHT)
 
 
 def process_frame(img):
@@ -23,8 +26,9 @@ def process_frame(img):
     print("%d matches" % (len(matches)))
 
     for pt1, pt2 in matches:
-        u1, v1 = map(lambda x: int(round(x)), pt1)
-        u2, v2 = map(lambda x: int(round(x)), pt2)
+        u1, v1 = fe.denormalize(pt1)
+        u2, v2 = fe.denormalize(pt2)
+
         cv2.circle(img, (u1, v1), color=(0, 255, 0), radius=3)
         cv2.line(img, (u1, v1), (u2, v2), color=(255, 0, 0))
 
