@@ -25,11 +25,14 @@ class Extractor(object):
         self.K = K
         self.Kinv = np.linalg.inv(self.K)
 
+    def normalize(self, pts):
+        return np.dot(self.Kinv, add_ones(pts).T).T[:, 0:2]
+
     # use the projection matrix of the camera
     def denormalize(self, pt):
         # https://docs.opencv.org/4.x/d9/d0c/group__calib3d.html
         # Take the homogenous coordinates and left multiply it by the K matrix
-        ret = np.dot(self.K, np.array([pt[0], pt[1], 1.0]).T)
+        ret = np.dot(self.K, np.array([pt[0], pt[1], 1.0]))
         return int(round(ret[0])), int(round(ret[1]))
 
     def extract(self, img):
@@ -60,8 +63,8 @@ class Extractor(object):
             ret = np.array(ret)
 
             # normalize coordinates: subtract to move to zero (lens image center)
-            ret[:, 0, :] = np.dot(self.Kinv, add_ones(ret[:, 0, :]).T).T[:, 0:2]
-            ret[:, 1, :] = np.dot(self.Kinv, add_ones(ret[:, 1, : ]).T).T[:, 0:2]
+            ret[:, 0, :] = self.normalize(ret[:, 0, :])
+            ret[:, 1, :] = self.normalize(ret[:, 1, :])
 
             model, inliers = ransac((ret[:, 0], ret[:, 1]),
                                         #EssentialMatrixTransform,
