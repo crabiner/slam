@@ -79,12 +79,24 @@ class Extractor(object):
             # now we want just the inliers and not the noise
             ret = ret[inliers]
 
+            W = np.mat([[0, -1, 0], [1, 0, 0], [0, 0, 1]], dtype=float)
             # find out fx and fy assuming they are equal
             # v should be [1, 1, 0] see Hartley and zisserman chapter 6
             # Because it is a triangle with lines of [sqrt(2)/2,sqrt(2)/2, 1]
             # we can use svd to estimate rotation and translation
-            s, v, d = (np.linalg.svd(model.params))
-            print(v)
+            u, w, vt = (np.linalg.svd(model.params))
+            # print(w)
+            assert np.linalg.det(u) > 0
+
+            if np.linalg.det(vt) < 0:
+                u *= -1.0
+
+            # there two possible rotation matrices
+            R = np.dot(np.dot(u, W), vt)
+            if np.sum(R.diagonal()) < 0:
+                R = np.dot(np.dot(u, W.T), vt)
+            print(R)
+
 
         self.last = {'keypoint'
                      's': keypoints, 'descriptors': descriptors}
