@@ -73,18 +73,18 @@ class Extractor(object):
                                         EssentialMatrixTransform,
                                         #FundamentalMatrixTransform,
                                         min_samples = 8,
-                                        residual_threshold = 1,
+                                        residual_threshold = 0.005, # lower residual threshold to get less errors
                                         max_trials = 100)
 
             # now we want just the inliers and not the noise
             ret = ret[inliers]
 
             # find out fx and fy assuming they are equal
-            # v should be [sqrt(2),sqrt(2), 0]
+            # v should be [1, 1, 0] see Hartley and zisserman chapter 6
+            # Because it is a triangle with lines of [sqrt(2)/2,sqrt(2)/2, 1]
+            # we can use svd to estimate rotation and translation
             s, v, d = (np.linalg.svd(model.params))
-            f_estimate = np.sqrt(2)/((v[0] + v[1])/2)
-            f_estimate_avg.append(f_estimate)
-            print(f"sqrt(2) = {np.median(f_estimate_avg)}" )
+            print(v)
 
         self.last = {'keypoint'
                      's': keypoints, 'descriptors': descriptors}
