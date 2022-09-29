@@ -2,7 +2,6 @@
 import cv2
 from display import Display
 import numpy as np
-# np.set_printoptions(supress=True)
 from extractor import Extractor
 
 WIDTH = 1920 // 2
@@ -11,9 +10,13 @@ HEIGHT = 1080 // 2
 disp = Display(WIDTH, HEIGHT)
 
 F = 1
-K = np.array([[F, 0, WIDTH // 2], [0, F, HEIGHT // 2], [0, 0, 1]])
+# principal point that is usually at the image center
+cx = WIDTH // 2
+cy = HEIGHT // 2
 
-fe = Extractor(WIDTH, HEIGHT)
+K = np.array([[F, 0, cx], [0, F, cy], [0, 0, 1]])
+
+fe = Extractor(K)
 
 
 def process_frame(img):

@@ -2,31 +2,42 @@
 import cv2
 from display import Display
 import numpy as np
+np.set_printoptions(suppress=True)
+
 from skimage.measure import ransac
 from skimage.transform import FundamentalMatrixTransform
 from skimage.transform import EssentialMatrixTransform
 
 MAX_FEATURES = 100
 
+# turn [[x,y]] -> [[x,y,1]]
+def add_ones(x):
+    return np.concatenate([x, np.ones((x.shape[0], 1))], axis=1)
+
 class Extractor(object):
-    def __init__(self, w, h):
+    def __init__(self, K):
         self.orb = cv2.ORB_create(MAX_FEATURES)
 
         # Brute-Force matcher is simple. It takes the descriptor of one feature in first set and is matched
         # with all other features in second set using some distance calculation. And the closest one is returned.
         self.bf = cv2.BFMatcher(cv2.NORM_HAMMING)
         self.last = None
-        self.w = w
-        self.h = h
+        self.K = K
+        self.Kinv = np.linalg.inv(self.K)
 
+    # use the projection matrix of the camera
     def denormalize(self, pt):
-        # denormalize for display (add frame center)
-        return int(round(pt[0] + self.h/2)), int(round(pt[1] + self.w/2))
+        # https://docs.opencv.org/4.x/d9/d0c/group__calib3d.html
+        # Take the homogenous coordinates and left multiply it by the K matrix
+        ret = np.dot(self.K, np.array([pt[0], pt[1], 1.0]).T)
+        return int(round(ret[0])), int(round(ret[1]))
 
     def extract(self, img):
         # detection
         # use opencv good features to track
-        features = cv2.goodFeaturesToTrack(np.mean(img, axis=2).astype(np.uint8), 3000, qualityLevel=0.01,
+        features = cv2.goodFeaturesToTrack(np.mean(img, axis=2).astype(np.uint8),
+                                           3000,
+                                            qualityLevel=0.01,
                                            minDistance=3)
 
         # extraction
@@ -49,8 +60,8 @@ class Extractor(object):
             ret = np.array(ret)
 
             # normalize coordinates: subtract to move to zero (lens image center)
-            ret[:, :, 0] -= img.shape[0] // 2
-            ret[:, :, 1] -= img.shape[1] // 2
+            ret[:, 0, :] = np.dot(self.Kinv, add_ones(ret[:, 0, :]).T).T[:, 0:2]
+            ret[:, 1, :] = np.dot(self.Kinv, add_ones(ret[:, 1, : ]).T).T[:, 0:2]
 
             model, inliers = ransac((ret[:, 0], ret[:, 1]),
                                         #EssentialMatrixTransform,
@@ -62,8 +73,8 @@ class Extractor(object):
             # now we want just the inliers and not the noise
             ret = ret[inliers]
 
-            s, v, d = (np.linalg.svd(model.params))
-            print(v)
+            # s, v, d = (np.linalg.svd(model.params))
+            # print(v)
 
         self.last = {'keypoint'
                      's': keypoints, 'descriptors': descriptors}
