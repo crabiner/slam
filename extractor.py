@@ -10,6 +10,7 @@ from skimage.transform import EssentialMatrixTransform
 
 MAX_FEATURES = 100
 
+f_estimate_avg = []
 # turn [[x,y]] -> [[x,y,1]]
 def add_ones(x):
     return np.concatenate([x, np.ones((x.shape[0], 1))], axis=1)
@@ -76,8 +77,12 @@ class Extractor(object):
             # now we want just the inliers and not the noise
             ret = ret[inliers]
 
-            # s, v, d = (np.linalg.svd(model.params))
-            # print(v)
+            # find out fx and fy assuming they are equal
+            # v should be [sqrt(2),sqrt(2), 0]
+            s, v, d = (np.linalg.svd(model.params))
+            f_estimate = np.sqrt(2)/((v[0] + v[1])/2)
+            f_estimate_avg.append(f_estimate)
+            print(f"f_estimate={np.median(f_estimate_avg)}" )
 
         self.last = {'keypoint'
                      's': keypoints, 'descriptors': descriptors}
