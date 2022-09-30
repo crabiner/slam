@@ -15,6 +15,19 @@ f_estimate_avg = []
 def add_ones(x):
     return np.concatenate([x, np.ones((x.shape[0], 1))], axis=1)
 
+def extractRt(E):
+  W = np.mat([[0,-1,0],[1,0,0],[0,0,1]],dtype=float)
+  U,d,Vt = np.linalg.svd(E)
+  assert np.linalg.det(U) > 0
+  if np.linalg.det(Vt) < 0:
+    Vt *= -1.0
+  R = np.dot(np.dot(U, W), Vt)
+  if np.sum(R.diagonal()) < 0:
+    R = np.dot(np.dot(U, W.T), Vt)
+  t = U[:, 2]
+  Rt = np.concatenate([R,t.reshape(3,1)], axis=1)
+  return Rt
+
 class Extractor(object):
     def __init__(self, K):
         self.orb = cv2.ORB_create(MAX_FEATURES)
@@ -60,6 +73,7 @@ class Extractor(object):
                     ret.append((kp1, kp2))
 
         # filter
+        Rt = None
         if len(ret) > 0:
             ret = np.array(ret)
 
@@ -74,33 +88,17 @@ class Extractor(object):
                                         #FundamentalMatrixTransform,
                                         min_samples = 8,
                                         residual_threshold = 0.005, # lower residual threshold to get less errors
-                                        max_trials = 100)
+                                        max_trials = 200)
 
             # now we want just the inliers and not the noise
             ret = ret[inliers]
 
-            W = np.mat([[0, -1, 0], [1, 0, 0], [0, 0, 1]], dtype=float)
-            # find out fx and fy assuming they are equal
-            # v should be [1, 1, 0] see Hartley and zisserman chapter 6
-            # Because it is a triangle with lines of [sqrt(2)/2,sqrt(2)/2, 1]
-            # we can use svd to estimate rotation and translation
-            u, w, vt = (np.linalg.svd(model.params))
-            # print(w)
-            assert np.linalg.det(u) > 0
-
-            if np.linalg.det(vt) < 0:
-                u *= -1.0
-
-            # there two possible rotation matrices
-            R = np.dot(np.dot(u, W), vt)
-            if np.sum(R.diagonal()) < 0:
-                R = np.dot(np.dot(u, W.T), vt)
-            print(R)
-
+            # extract rotation and translation
+            Rt = extractRt(model.params)
 
         self.last = {'keypoint'
                      's': keypoints, 'descriptors': descriptors}
 
         # we only care about the matches
-        return ret
+        return ret, Rt
 

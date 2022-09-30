@@ -21,12 +21,13 @@ fe = Extractor(K)
 
 def process_frame(img):
     img = cv2.resize(img, (WIDTH, HEIGHT))
-    matches = fe.extract(img)
+    matches, pose = fe.extract(img)
 
-    if matches is None:
+    if pose is None:
         return
 
     print("%d matches" % (len(matches)))
+    print(pose)
 
     for pt1, pt2 in matches:
         u1, v1 = fe.denormalize(pt1)
