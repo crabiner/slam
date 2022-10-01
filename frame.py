@@ -77,20 +77,20 @@ def match_frames(f1, f2):
 
     # Lowe's ratio test
     ret = []
+    idx1, idx2 = [], []
     for m, n in matches:
         if m.distance < 0.75 * n.distance:
+            # keep around indices
+            idx1.append(m.queryIdx)
+            idx2.append(m.trainIdx)
+
             p1 = f1.points[m.queryIdx]
             p2 = f2.points[m.trainIdx]
             ret.append((p1, p2))
     assert len(ret) >= 8
     ret = np.array(ret)
-
-    # normalize coordinates: subtract to move to zero (lens image center)
-    # ret[:, 0, :] = normalize(ret[:, 0, :])
-    # ret[:, 1, :] = normalize(ret[:, 1, :])
-
-    # filter
-    Rt = None
+    idx1 = np.array(idx1)
+    idx2 = np.array(idx2)
 
     # fit matrix
     # When we have the F number (calibrated camera) we can use
@@ -111,7 +111,7 @@ def match_frames(f1, f2):
     Rt = extractRt(model.params)
 
     # we only care about the matches
-    return ret, Rt
+    return idx1[inliers], idx2[inliers], Rt
 
 
 class Frame(object):
