@@ -2,7 +2,7 @@
 import cv2
 from display import Display
 import numpy as np
-from frame import Frame, denormalize, match
+from frame import Frame, denormalize, match_frames, IRt
 import g2o
 
 # camera intrinsics
@@ -27,12 +27,17 @@ def process_frame(img):
     if len(frames) <= 1:
         return
 
-    ret, Rt = match(frames[-1], frames[-2])
+    points, Rt = match_frames(frames[-1], frames[-2])
 
+    # triangolate between the first and second image
+    # pts4d is in homogenous coordinates
+    pts4d = cv2.triangulatePoints(IRt[:3], Rt[:3], points[:, 0].T, points[:, 1].T).T
+    frames[-1].pose = np.dot(Rt, frames[-2].pose)
+    print(frames[-1].pose)
     # print("%d matches" % (len(matches)))
     # print(pose)
 
-    for pt1, pt2 in ret:
+    for pt1, pt2 in points:
         u1, v1 = denormalize(K, pt1)
         u2, v2 = denormalize(K, pt2)
 

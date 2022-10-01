@@ -11,6 +11,8 @@ from skimage.transform import EssentialMatrixTransform
 def add_ones(x):
     return np.concatenate([x, np.ones((x.shape[0], 1))], axis=1)
 
+# IRt - Identity rotation translation - matrix of 4 rows and 4 columns
+IRt = np.eye(4) # no rotation
 
 def extractRt(E):
     W = np.mat([[0, -1, 0], [1, 0, 0], [0, 0, 1]], dtype=float)
@@ -22,8 +24,15 @@ def extractRt(E):
     if np.sum(R.diagonal()) < 0:
         R = np.dot(np.dot(U, W.T), Vt)
     t = U[:, 2]
-    Rt = np.concatenate([R, t.reshape(3, 1)], axis=1)
-    return Rt
+    ret = np.eye(4)
+
+    # up to column 3
+    ret[:3, :3] = R
+    # last column (3)
+    ret[:3, 3] = t
+
+    print(ret)
+    return ret
 
 def extract(img):
     # detection
@@ -56,7 +65,7 @@ def denormalize(K, pt):
 
 
 
-def match(f1, f2):
+def match_frames(f1, f2):
     # matching
 
     # Brute-Force matcher is simple. It takes the descriptor of one feature in first set and is matched
@@ -108,6 +117,7 @@ class Frame(object):
     def __init__(self, img, K):
         self.K = K
         self.Kinv = np.linalg.inv(self.K)
+        self.pose = IRt
 
         pts, self.descriptors = extract(img)
         self.points = normalize(self.Kinv, pts)
