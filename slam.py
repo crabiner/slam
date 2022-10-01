@@ -33,9 +33,25 @@ def process_frame(img):
     # pts4d is in homogenous coordinates
     pts4d = cv2.triangulatePoints(IRt[:3], Rt[:3], points[:, 0].T, points[:, 1].T).T
     frames[-1].pose = np.dot(Rt, frames[-2].pose)
-    print(frames[-1].pose)
+    # print(frames[-1].pose)
+
+    # reject pts without enough parallax
+    good_pts4d = np.abs(pts4d[:, 3])> 0.005
+    print(f"sum(good_pts4d) {sum(good_pts4d)}, len(good_pts4d) {len(good_pts4d)}")
+    pts4d = pts4d[good_pts4d]
+
+    # homogenous 3D coords
+    pts4d /= pts4d[:, 3:]
+
+    # X is right, y is down, z is forward
+    # reject points behind the camera
+    good_pts4d = pts4d[:, 2] > 0
+    pts4d = pts4d[good_pts4d]
+    print(f"sum(good_pts4d) {sum(good_pts4d)}, len(good_pts4d) {len(good_pts4d)}")
+
+    # print(pts4d)
     # print("%d matches" % (len(matches)))
-    # print(pose)
+
 
     for pt1, pt2 in points:
         u1, v1 = denormalize(K, pt1)
