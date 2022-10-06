@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
+import os
+
 import cv2
 from display import Display
 import numpy as np
 from frame import Frame, denormalize, match_frames, IRt
 import g2o
-import OpenGL.GL as gl
-import pangolin
+from pointmap import Map, Point
 
-from multiprocessing import Process, Queue
+
 
 # camera intrinsics
 WIDTH = 1920 // 2
@@ -19,95 +20,27 @@ F = 270
 K = np.array([[F, 0, cx], [0, F, cy], [0, 0, 1]])
 Kinv = np.linalg.inv(K)
 
-# principal point that is usually at the image center
-
-
-# global map
-class Map(object):
-    def __init__(self):
-        self.state = None
-        self.frames = []
-        self.points = []
-        self.q = Queue()
-
-        p = Process(target=self.viewer_thread, args=(self.q,))
-        p.daemon = True
-        p.start()
-
-    def viewer_thread(self, q):
-        self.viewer_init(1024, 768)
-        while 1:
-            self.viewer_refresh(q)
-
-    def viewer_init(self, w, h):
-        pangolin.CreateWindowAndBind('Main', w, h)
-        gl.glEnable(gl.GL_DEPTH_TEST)
-
-        # Define Projection and initial ModelView matrix
-        self.scam = pangolin.OpenGlRenderState(
-            pangolin.ProjectionMatrix(w, h, 420, 420, w/2, h/2, 0.2, 1000),
-            pangolin.ModelViewLookAt(0, -10, -20, # up direction
-                                     0, 0, 0,
-                                     0, -1, 0))
-        self.handler = pangolin.Handler3D(self.scam)
-
-        # Create Interactive View in window
-        self.dcam = pangolin.CreateDisplay()
-        self.dcam.SetBounds(0.0, 1.0, 0.0, 1.0, -640.0 / 480.0)
-        self.dcam.SetHandler(self.handler)
-
-    def viewer_refresh(self, q):
-        if self.state is None or not q.empty():
-            self.state = q.get()
-
-        # while not pangolin.ShouldQuit():
-        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-        gl.glClearColor(1.0, 1.0, 1.0, 1.0)
-        self.dcam.Activate(self.scam)
-
-        # draw poses
-        gl.glColor3f(0.0, 1.0, 0.0)
-        pangolin.DrawCameras(self.state[0])
-
-        # draw keypoints
-        gl.glPointSize(2)
-        gl.glColor3f(1.0, 0.0, 0.0)
-        pangolin.DrawPoints(self.state[1])
-
-        pangolin.FinishFrame()
-
-    def display(self):
-        poses, pts = [], []
-        for f in self.frames:
-            poses.append(f.pose)
-        for p in self.points:
-            pts.append(p.xyz)
-        self.q.put((np.array(poses), np.array(pts)))
-
-
 # main classes
 mapp = Map()
-# disp = Display(WIDTH, HEIGHT)
-disp = None
-
-class Point(object):
-    # A point is a 3-D point in the world
-    # Each point is observed in multiple frames
-    def __init__(self, mapp, loc):
-        self.frames = []
-        self.xyz = loc
-        self.idxs = []
-        self.id = len(mapp.points)
-        mapp.points.append(self)
-
-    # idx is index of which descriptor it is in the frame
-    def add_observation(self, frame, idx):
-        self.frames.append(frame)
-        self.idxs.append(idx)
+disp = Display(WIDTH, HEIGHT) if os.getenv("D2D") is not None else None
 
 
+# trianglulate taken from orb-slam 2
 def triangulate(pose1, pose2, pts1, pts2):
-    return cv2.triangulatePoints(pose1[:3], pose2[:3], pts1.T, pts2.T).T
+    # return cv2.triangulatePoints(pose1[:3], pose2[:3], pts1.T, pts2.T).T
+    ret = np.zeros((pts1.shape[0], 4))
+    pose1 = np.linalg.inv(pose1)
+    pose2 = np.linalg.inv(pose2)
+    for i, p in enumerate(zip(pts1, pts2)):
+        A = np.zeros((4,4))
+        A[0] = p[1][0] * pose1[2] - pose1[0]
+        A[1] = p[1][1] * pose1[2] - pose1[1]
+        A[2] = p[0][0] * pose2[2] - pose2[0]
+        A[3] = p[0][1] * pose2[2] - pose2[1]
+
+        _, _, vt = np.linalg.svd(A)
+        ret[i] = vt[3]
+    return ret
 
 
 def process_frame(img):
@@ -126,7 +59,7 @@ def process_frame(img):
     # pts4d is in homogenous coordinates
     f1.pose = np.dot(Rt, f2.pose)
 
-    pts4d = triangulate(f1.pose, f2.pose, f1.points[idx1], f2.points[idx2])
+    pts4d = triangulate(f1.pose, f2.pose, f1.pts[idx1], f2.pts[idx2])
     # homogenous 3D coords
     pts4d /= pts4d[:, 3:]
 
@@ -147,7 +80,7 @@ def process_frame(img):
     # print(pts4d)
     # print("%d matches" % (len(matches)))
 
-    for pt1, pt2 in zip(f1.points[idx1], f2.points[idx2]):
+    for pt1, pt2 in zip(f1.pts[idx1], f2.pts[idx2]):
         u1, v1 = denormalize(K, pt1)
         u2, v2 = denormalize(K, pt2)
 

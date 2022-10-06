@@ -73,7 +73,7 @@ def match_frames(f1, f2):
     bf = cv2.BFMatcher(cv2.NORM_HAMMING)
 
     # match to previous frame using brute force matcher
-    matches = bf.knnMatch(f1.descriptors, f2.descriptors, k=2)
+    matches = bf.knnMatch(f1.des, f2.des, k=2)
 
     # Lowe's ratio test
     ret = []
@@ -84,8 +84,8 @@ def match_frames(f1, f2):
             idx1.append(m.queryIdx)
             idx2.append(m.trainIdx)
 
-            p1 = f1.points[m.queryIdx]
-            p2 = f2.points[m.trainIdx]
+            p1 = f1.pts[m.queryIdx]
+            p2 = f2.pts[m.trainIdx]
             ret.append((p1, p2))
     assert len(ret) >= 8
     ret = np.array(ret)
@@ -115,14 +115,14 @@ def match_frames(f1, f2):
 
 
 class Frame(object):
-    def __init__(self, mapp, img, K):
-        self.K = K
-        self.Kinv = np.linalg.inv(self.K)
-        self.pose = IRt
+  def __init__(self, mapp, img, K):
+    self.K = K
+    self.Kinv = np.linalg.inv(self.K)
+    self.pose = IRt
+    self.h, self.w = img.shape[0:2]
 
-        pts, self.descriptors = extract(img)
-        self.points = normalize(self.Kinv, pts)
+    pts, self.des = extract(img)
+    self.pts = normalize(self.Kinv, pts)
 
-        self.id = len(mapp.frames)
-        mapp.frames.append(self)
-
+    self.id = len(mapp.frames)
+    mapp.frames.append(self)
