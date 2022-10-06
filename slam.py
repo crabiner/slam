@@ -17,7 +17,7 @@ cx = WIDTH // 2
 cy = HEIGHT // 2
 F = 270
 K = np.array([[F, 0, cx], [0, F, cy], [0, 0, 1]])
-
+Kinv = np.linalg.inv(K)
 
 # principal point that is usually at the image center
 
@@ -25,7 +25,6 @@ K = np.array([[F, 0, cx], [0, F, cy], [0, 0, 1]])
 # global map
 class Map(object):
     def __init__(self):
-        self.scam = None
         self.state = None
         self.frames = []
         self.points = []
@@ -36,18 +35,20 @@ class Map(object):
         p.start()
 
     def viewer_thread(self, q):
-        self.viewer_init()
+        self.viewer_init(1024, 768)
         while 1:
             self.viewer_refresh(q)
 
-    def viewer_init(self):
-        pangolin.CreateWindowAndBind('Main', 640, 480)
+    def viewer_init(self, w, h):
+        pangolin.CreateWindowAndBind('Main', w, h)
         gl.glEnable(gl.GL_DEPTH_TEST)
 
         # Define Projection and initial ModelView matrix
         self.scam = pangolin.OpenGlRenderState(
-            pangolin.ProjectionMatrix(640, 480, 420, 420, 320, 240, 0.2, 100),
-            pangolin.ModelViewLookAt(-2, 2, -2, 0, 0, 0, pangolin.AxisDirection.AxisY))
+            pangolin.ProjectionMatrix(w, h, 420, 420, w/2, h/2, 0.2, 1000),
+            pangolin.ModelViewLookAt(0, -10, -20, # up direction
+                                     0, 0, 0,
+                                     0, -1, 0))
         self.handler = pangolin.Handler3D(self.scam)
 
         # Create Interactive View in window
@@ -59,24 +60,19 @@ class Map(object):
         if self.state is None or not q.empty():
             self.state = q.get()
 
-        # trun state into points
-        ppts = np.array([d[:3, 3] for d in self.state[0]])
-        spts = np.array(self.state[1])
-
         # while not pangolin.ShouldQuit():
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
         gl.glClearColor(1.0, 1.0, 1.0, 1.0)
         self.dcam.Activate(self.scam)
 
-        # big green points for the poses
-        gl.glPointSize(10)
-        gl.glColor3f(1.0, 0.0, 0.0)
-        pangolin.DrawPoints(ppts)
-
-        # little red points
-        gl.glPointSize(2)
+        # draw poses
         gl.glColor3f(0.0, 1.0, 0.0)
-        pangolin.DrawPoints(spts)
+        pangolin.DrawCameras(self.state[0])
+
+        # draw keypoints
+        gl.glPointSize(2)
+        gl.glColor3f(1.0, 0.0, 0.0)
+        pangolin.DrawPoints(self.state[1])
 
         pangolin.FinishFrame()
 
@@ -84,18 +80,15 @@ class Map(object):
         poses, pts = [], []
         for f in self.frames:
             poses.append(f.pose)
-            # print(f.id)
-            # print(f.pose)
         for p in self.points:
             pts.append(p.xyz)
-            print(p.xyz)
-        self.q.put((poses, pts))
+        self.q.put((np.array(poses), np.array(pts)))
 
 
 # main classes
-# disp = Display(WIDTH, HEIGHT)
 mapp = Map()
-
+# disp = Display(WIDTH, HEIGHT)
+disp = None
 
 class Point(object):
     # A point is a 3-D point in the world
@@ -141,7 +134,7 @@ def process_frame(img):
     # reject points behind the camera
     # reject pts without enough parallax
     good_pts4d = (np.abs(pts4d[:, 3]) > 0.005) & (pts4d[:, 2] > 0)
-    print(f"sum(good_pts4d) {sum(good_pts4d)}, len(good_pts4d) {len(good_pts4d)}")
+    #  f"sum(good_pts4d) {sum(good_pts4d)}, len(good_pts4d) {len(good_pts4d)}")
     pts4d = pts4d[good_pts4d]
 
     for i, p in enumerate(pts4d):
@@ -161,8 +154,10 @@ def process_frame(img):
         cv2.circle(img, (u1, v1), color=(0, 255, 0), radius=3)
         cv2.line(img, (u1, v1), (u2, v2), color=(255, 0, 0))
 
-    # disp.paint(img)
-    #
+    # 2D
+    if disp is not None:
+        disp.paint(img)
+
     # 3D
     mapp.display()
 

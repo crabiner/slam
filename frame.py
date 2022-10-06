@@ -101,7 +101,7 @@ def match_frames(f1, f2):
                             min_samples=8,
                             residual_threshold=0.005,  # lower residual threshold to get less errors
                             max_trials=200)
-    print(f"sum(inliers) {sum(inliers)}, len(inliers) {len(inliers)}")
+    # print(f"sum(inliers) {sum(inliers)}, len(inliers) {len(inliers)}")
 
     # ignore outliers
     # now we want just the inliers and not the noise
