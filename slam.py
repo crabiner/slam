@@ -9,7 +9,7 @@ import g2o
 from pointmap import Map, Point
 
 # set this!
-F = 800
+F = int(os.getenv("F", "800"))
 
 # camera intrinsics
 WIDTH = 1920 // 2
