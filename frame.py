@@ -40,7 +40,7 @@ def extract(img):
 
     # use opencv good features to track
     points = cv2.goodFeaturesToTrack(np.mean(img, axis=2).astype(np.uint8),
-                                     3000,
+                                     500,
                                      qualityLevel=0.01,
                                      minDistance=3)
 
@@ -80,13 +80,16 @@ def match_frames(f1, f2):
     idx1, idx2 = [], []
     for m, n in matches:
         if m.distance < 0.75 * n.distance:
-            # keep around indices
-            idx1.append(m.queryIdx)
-            idx2.append(m.trainIdx)
-
             p1 = f1.pts[m.queryIdx]
             p2 = f2.pts[m.trainIdx]
-            ret.append((p1, p2))
+
+            if np.linalg.norm((p1 - p2)) < 0.1:
+                # keep around indices
+                idx1.append(m.queryIdx)
+                idx2.append(m.trainIdx)
+
+                ret.append((p1, p2))
+
     assert len(ret) >= 8
     ret = np.array(ret)
     idx1 = np.array(idx1)
@@ -100,7 +103,7 @@ def match_frames(f1, f2):
                             # FundamentalMatrixTransform,
                             min_samples=8,
                             residual_threshold=0.005,  # lower residual threshold to get less errors
-                            max_trials=200)
+                            max_trials=100)
     # print(f"sum(inliers) {sum(inliers)}, len(inliers) {len(inliers)}")
 
     # ignore outliers
