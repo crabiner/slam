@@ -14,9 +14,9 @@ def add_ones(x):
 # IRt - Identity rotation translation - matrix of 4 rows and 4 columns
 IRt = np.eye(4) # no rotation
 
-def extractRt(E):
+def extractRt(F):
     W = np.mat([[0, -1, 0], [1, 0, 0], [0, 0, 1]], dtype=float)
-    U, d, Vt = np.linalg.svd(E)
+    U, d, Vt = np.linalg.svd(F)
     assert np.linalg.det(U) > 0
     if np.linalg.det(Vt) < 0:
         Vt *= -1.0
@@ -32,6 +32,9 @@ def extractRt(E):
     ret[:3, 3] = t
 
     # print(ret)
+
+    # to calibrate F this vector should be close to [1 1 0]
+    print(d)
     return ret
 
 def extract(img):
@@ -42,7 +45,7 @@ def extract(img):
     points = cv2.goodFeaturesToTrack(np.mean(img, axis=2).astype(np.uint8),
                                      500,
                                      qualityLevel=0.01,
-                                     minDistance=10)
+                                     minDistance=7)
 
     # extraction
     keypoints = [cv2.KeyPoint(x=f[0][0], y=f[0][1], size=20) for f in points]
@@ -83,7 +86,10 @@ def match_frames(f1, f2):
             p1 = f1.pts[m.queryIdx]
             p2 = f2.pts[m.trainIdx]
 
-            if np.linalg.norm((p1 - p2)) < 0.1:
+            #print(m.distance)
+            # travel less than 10% of frame diagonal and be within orb distance 32
+            # np.linalg.norm((p1 - p2))  i s on pixel scale
+            if np.linalg.norm((p1 - p2)) < 0.1 * np.linalg.norm([f1.w, f1.h]) and m.distance < 32:
                 # keep around indices
                 idx1.append(m.queryIdx)
                 idx2.append(m.trainIdx)
@@ -99,12 +105,13 @@ def match_frames(f1, f2):
     # When we have the F number (calibrated camera) we can use
     # EssentialMatrixTransform and it estimates less parameters
     model, inliers = ransac((ret[:, 0], ret[:, 1]),
-                            EssentialMatrixTransform,
-                            # FundamentalMatrixTransform,
+                            # EssentialMatrixTransform,
+                            FundamentalMatrixTransform,
                             min_samples=8,
                             residual_threshold=0.005,  # lower residual threshold to get less errors
                             max_trials=100)
     # print(f"sum(inliers) {sum(inliers)}, len(inliers) {len(inliers)}")
+    # print("Matches: %d -> %d -> %d -> %d" % (len(f1.des), len(matches), len(inliers), sum(inliers)))
 
     # ignore outliers
     # now we want just the inliers and not the noise

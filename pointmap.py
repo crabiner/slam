@@ -28,11 +28,14 @@ class Map(object):
         self.frames = []
         self.points = []
         self.state = None
-        self.q = Queue()
+        self.q = None
 
-        p = Process(target=self.viewer_thread, args=(self.q,))
-        p.daemon = True
-        p.start()
+    def create_viewer(self):
+        self.q = Queue()
+        # vp viewer process
+        self.vp = Process(target=self.viewer_thread, args=(self.q,))
+        self.vp.daemon = True
+        self.vp.start()
 
     def viewer_thread(self, q):
         self.viewer_init(1024, 768)
