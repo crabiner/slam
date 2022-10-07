@@ -42,7 +42,7 @@ def extract(img):
     points = cv2.goodFeaturesToTrack(np.mean(img, axis=2).astype(np.uint8),
                                      500,
                                      qualityLevel=0.01,
-                                     minDistance=3)
+                                     minDistance=10)
 
     # extraction
     keypoints = [cv2.KeyPoint(x=f[0][0], y=f[0][1], size=20) for f in points]

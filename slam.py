@@ -16,7 +16,7 @@ HEIGHT = 1080 // 2
 
 cx = WIDTH // 2
 cy = HEIGHT // 2
-F = 270
+F = 800
 K = np.array([[F, 0, cx], [0, F, cy], [0, 0, 1]])
 Kinv = np.linalg.inv(K)
 
@@ -96,7 +96,7 @@ def process_frame(img):
 
 
 if __name__ == "__main__":
-    cap = cv2.VideoCapture("videos/test_drone.mp4")
+    cap = cv2.VideoCapture("videos/test_ohio.mp4")
 
     while cap.isOpened():
         ret, frame = cap.read()
