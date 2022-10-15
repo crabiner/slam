@@ -60,14 +60,17 @@ def process_frame(img):
     # pts4d is in homogenous coordinates
     f1.pose = np.dot(Rt, f2.pose)
 
-    pts4d = triangulate(f1.pose, f2.pose, f1.pts[idx1], f2.pts[idx2])
+    pts4d = triangulate(f1.pose, f2.pose, f1.kps[idx1], f2.kps[idx2])
     # homogenous 3D coords
     pts4d /= pts4d[:, 3:]
 
     # X is right, y is down, z is forward
     # reject points behind the camera
     # reject pts without enough parallax
-    good_pts4d = (np.abs(pts4d[:, 3]) > 0.005) & (pts4d[:, 2] > 0)
+    unmatched_points = np.array([f1.pts[i] is None for i in idx1]).astype(np.bool)
+
+    print(np.all(unmatched_points))
+    good_pts4d = (np.abs(pts4d[:, 3]) > 0.005) & (pts4d[:, 2] > 0) & unmatched_points
     #  f"sum(good_pts4d) {sum(good_pts4d)}, len(good_pts4d) {len(good_pts4d)}")
     pts4d = pts4d[good_pts4d]
 
@@ -81,7 +84,7 @@ def process_frame(img):
     # print(pts4d)
     # print("%d matches" % (len(matches)))
 
-    for pt1, pt2 in zip(f1.pts[idx1], f2.pts[idx2]):
+    for pt1, pt2 in zip(f1.kps[idx1], f2.kps[idx2]):
         u1, v1 = denormalize(K, pt1)
         u2, v2 = denormalize(K, pt2)
 
