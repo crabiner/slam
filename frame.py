@@ -34,7 +34,7 @@ def extractRt(F):
     # print(ret)
 
     # to calibrate F this vector should be close to [1 1 0]
-    print(d)
+    # print(d)
     return ret
 
 def extract(img):
@@ -108,10 +108,10 @@ def match_frames(f1, f2):
                             # EssentialMatrixTransform,
                             FundamentalMatrixTransform,
                             min_samples=8,
-                            residual_threshold=0.005,  # lower residual threshold to get less errors
+                            residual_threshold=0.001,  # lower residual threshold to get less errors
                             max_trials=100)
     # print(f"sum(inliers) {sum(inliers)}, len(inliers) {len(inliers)}")
-    # print("Matches: %d -> %d -> %d -> %d" % (len(f1.des), len(matches), len(inliers), sum(inliers)))
+    print("Matches: %d -> %d -> %d -> %d" % (len(f1.des), len(matches), len(inliers), sum(inliers)))
 
     # ignore outliers
     # now we want just the inliers and not the noise
